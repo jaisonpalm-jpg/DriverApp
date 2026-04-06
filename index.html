@@ -375,7 +375,7 @@
       <span>Sign In</span>
       <span style="font-size:16px;">→</span>
     </button>
-    <div style="text-align:center;font-size:9px;color:var(--txtf)">Demo: driver1@ironhorselogistics.com / IronHorse2026!</div>
+    <div style="text-align:center;font-size:9px;color:var(--txtf)">Password: <span style="font-family:var(--mono);color:var(--txts)">IronHorse2026!</span></div>
   </div>
 
   <!-- Quick login cards -->
@@ -408,7 +408,7 @@
     <span>▲ ◉ ▮▮▮</span>
   </div>
 
-  <!-- Dynamic Top Header -->
+   <!-- Dynamic Top Header -->
   <div class="top-header" id="top-header">
     <div>
       <div class="brand">FREIGHT <span>DESK</span></div>
@@ -674,7 +674,7 @@
         </svg>
       </div>
 
-      <!-- Stats row -->
+         <!-- Stats row -->
       <div class="stat-grid" style="grid-template-columns:repeat(4,1fr);">
         <div class="stat-box">
           <div class="stat-val" style="font-size:12px;color:var(--grn);">341</div>
@@ -1092,35 +1092,40 @@ window._auth = auth;
 window._db = db;
 window._firestore = { collection, query, where, orderBy, getDocs, doc, getDoc, addDoc, updateDoc, serverTimestamp };
 
-// Auth state
+// Demo profile fallbacks keyed by email
+const DEMO_PROFILES = {
+  'driver1@ironhorselogistics.com': { name: 'James Whitfield', role: 'driver', companyId: 'co_demo_ironhorse_logistics' },
+  'driver2@ironhorselogistics.com': { name: 'Rosa Mendez',     role: 'driver', companyId: 'co_demo_ironhorse_logistics' },
+  'driver3@ironhorselogistics.com': { name: 'Kevin Park',      role: 'driver', companyId: 'co_demo_ironhorse_logistics' },
+  'driver4@ironhorselogistics.com': { name: 'Darnell Hughes',  role: 'driver', companyId: 'co_demo_ironhorse_logistics' },
+  'admin@ironhorselogistics.com':   { name: 'Marcus Reed',     role: 'driver', companyId: 'co_demo_ironhorse_logistics' },
+};
+
+function getFallbackProfile(email) {
+  return DEMO_PROFILES[email] || { name: email.split('@')[0] || 'Driver', role: 'driver', companyId: 'co_demo_ironhorse_logistics' };
+}
+
 onAuthStateChanged(auth, async (user) => {
   if (user) {
-    // Get user profile from Firestore
     try {
       const userSnap = await getDoc(doc(db, "users", user.uid));
       if (userSnap.exists()) {
         const profile = userSnap.data();
-        // Check driver role
-        if (profile.role !== 'driver') {
-          showToast('⚠️ Driver access only');
-          await signOut(auth);
-          showLoginScreen();
-          return;
-        }
+        window._profile = profile;
+        window._companyId = profile.companyId || 'co_demo_ironhorse_logistics';
+        loadDriverApp(profile);
+      } else {
+        const profile = getFallbackProfile(user.email);
         window._profile = profile;
         window._companyId = profile.companyId;
         loadDriverApp(profile);
-      } else {
-        // Demo fallback
-        window._profile = { name: 'James Whitfield', role: 'driver', companyId: 'co_demo_ironhorse_logistics' };
-        window._companyId = 'co_demo_ironhorse_logistics';
-        loadDriverApp(window._profile);
       }
     } catch(e) {
-      console.warn('Profile load error', e);
-      window._profile = { name: 'James Whitfield', role: 'driver', companyId: 'co_demo_ironhorse_logistics' };
-      window._companyId = 'co_demo_ironhorse_logistics';
-      loadDriverApp(window._profile);
+      console.warn('Profile load error, using fallback:', e.message);
+      const profile = getFallbackProfile(user.email);
+      window._profile = profile;
+      window._companyId = profile.companyId;
+      loadDriverApp(profile);
     }
   } else {
     showLoginScreen();
@@ -1369,7 +1374,7 @@ async function doLogin() {
   } catch(e) {
     document.getElementById('loading').classList.add('hidden');
     document.getElementById('login-screen').classList.remove('hidden');
-    errEl.textContent = 'Invalid credentials. Try the demo account below.';
+    errEl.textContent = 'Sign-in failed. Use the quick login cards below.';
   }
 }
 
